@@ -124,8 +124,13 @@ Phases:
 | Name | Role |
 |---|---|
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 | Ishaq | Co-Lead |
 | [Hypnos8](https://github.com/Hypnos8) | Lead |
+=======
+| [iiSHAQii](https://github.com/iiSHAQii) | Co-Lead |
+| [Hypnos8](https://github.com/Hypnos8) | Co-Lead |
+>>>>>>> Stashed changes
 =======
 | [iiSHAQii](https://github.com/iiSHAQii) | Co-Lead |
 | [Hypnos8](https://github.com/Hypnos8) | Co-Lead |

@@ -99,5 +99,5 @@ Phases:
 
 | Name | Role |
 |---|---|
-| Ishaq | Lead |
-| [Hypnos8](https://github.com/Hypnos8) | Collaborator |
+| Ishaq | Co-Lead |
+| [Hypnos8](https://github.com/Hypnos8) | Lead |

@@ -2,7 +2,7 @@
 
 > A web-based tool that helps users structure and evaluate complex decisions using natural language and AI.
 
-[![Status](https://img.shields.io/badge/status-in%20development-yellow)](https://github.com)
+[![Status](https://img.shields.io/badge/status-in%20development-yellow)](https://github.com/iiSHAQii/ai-decision-assistant)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 ---
@@ -71,9 +71,33 @@ ai-decision-assistant/
 
 ---
 
-## Getting Started
+## Local Setup
 
-> Setup instructions will be added as the project progresses.
+> Requires Python 3.10+ and Node.js 18+
+
+> Copy `.env.example` to `.env` and add your API key before running.
+
+### Backend
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+### Frontend
+```bash
+cd frontend
+npm install
+npm start
+```
+
+---
+
+## Documentation
+
+- [PRD](./docs/PRD.md)
+- [Requirements](./docs/REQUIREMENTS.md)
+- [Contributing](./CONTRIBUTING.md)
 
 ---
 
@@ -85,7 +109,7 @@ Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening issues or pull r
 
 ## Roadmap
 
-See the [Issues tab](../../issues) for the full breakdown of phases and tasks.
+See the [Issues tab](https://github.com/iiSHAQii/ai-decision-assistant/issues) for the full breakdown of phases and tasks.
 
 Phases:
 - **Phase 1** — Project Setup
@@ -99,5 +123,15 @@ Phases:
 
 | Name | Role |
 |---|---|
-| Ishaq | Lead |
-| [Hypnos8](https://github.com/Hypnos8) | Collaborator |
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+| Ishaq | Co-Lead |
+| [Hypnos8](https://github.com/Hypnos8) | Lead |
+=======
+| [iiSHAQii](https://github.com/iiSHAQii) | Co-Lead |
+| [Hypnos8](https://github.com/Hypnos8) | Co-Lead |
+>>>>>>> Stashed changes
+=======
+| [iiSHAQii](https://github.com/iiSHAQii) | Co-Lead |
+| [Hypnos8](https://github.com/Hypnos8) | Co-Lead |
+>>>>>>> Stashed changes

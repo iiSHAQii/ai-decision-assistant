@@ -33,7 +33,7 @@ if __name__ == "__main__":
             {"name": "Career Opportunities", "weight": 0.4},
             {"name": "Cost of Living", "weight": 0.2}
         ],
-        # options do not have to be provided, but if they are, they must have a score
+        # options and option scores are not required
         "options": [{"name": "London", "score": 7.5}, {"name": "Berlin", "score": 6.2}]
     }
     """

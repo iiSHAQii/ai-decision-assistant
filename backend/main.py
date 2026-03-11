@@ -1,21 +1,25 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
+from backend.services.llm_service import parse_decision
 
 app = FastAPI()
 
+
 class AnalyzeRequest(BaseModel):
-    decision_question: str
+    question: str
+
 
 class AnalyzeResponse(BaseModel):
-    message: str
-    decision_question: str
+    options: list
+    criteria: list
+    weights: dict
 
-@app.post("/analyze", response_model=AnalyzeResponse)
+
+@app.post("/api/decisions/analyze", response_model=AnalyzeResponse)
 async def analyze_decision(request: AnalyzeRequest):
-    """
-    Analyzes a decision question and provides a dummy response.
-    """
-    return AnalyzeResponse(
-        message=f"Received your decision question: '{request.decision_question}'",
-        decision_question=request.decision_question
-    )
+    try:
+        result = parse_decision(request.question)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from backend.decision import ParsedDecision
-from backend.services.criterion_data_service import get_option_data
+from backend.services.criteria_data_service import get_option_data
 from backend.services.llm_service import parse_decision
 
 app = FastAPI()

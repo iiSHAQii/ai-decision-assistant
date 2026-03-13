@@ -12,6 +12,7 @@ class Criterion(BaseModel):
 class Option(BaseModel):
     name: str
     score: float | None = None
+    raw_data: str | float | None = None
 
 
 class ParsedDecision(BaseModel):

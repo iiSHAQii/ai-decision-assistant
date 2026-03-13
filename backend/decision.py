@@ -9,10 +9,12 @@ class Criterion(BaseModel):
     total_score: float | None = None
 
 
+
 class Option(BaseModel):
     name: str
     score: float | None = None
-    raw_data: str | float | None = None
+    # Per-criterion values for this option (e.g. salary, cost_of_living, raw_salary, ...)
+    criterion_values: dict[str, float | None] | None = None
 
 
 class ParsedDecision(BaseModel):

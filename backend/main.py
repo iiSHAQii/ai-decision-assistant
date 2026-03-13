@@ -16,9 +16,10 @@ class AnalyzeRequest(BaseModel):
 async def analyze_decision(request: AnalyzeRequest):
     try:
         result = parse_decision(request.question)
-        option_data = get_option_data(
+        result = get_option_data(
             result
         )  # next step: score the options and enrich the result with the scores
+        print(result)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

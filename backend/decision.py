@@ -1,5 +1,6 @@
-from pydantic import BaseModel, confloat
 import pprint
+
+from pydantic import BaseModel, confloat
 
 
 class Criterion(BaseModel):
@@ -7,7 +8,6 @@ class Criterion(BaseModel):
     weight: confloat(ge=0.0, le=1.0)
     # will be filled later
     total_score: float | None = None
-
 
 
 class Option(BaseModel):
@@ -42,3 +42,44 @@ if __name__ == "__main__":
     """
     parsed_decision = ParsedDecision.model_validate_json(json_str)
     pprint.pprint(parsed_decision)
+
+
+def rank_options(decision: ParsedDecision) -> ParsedDecision:
+    """
+    Computes weighted scores for options and ranks them.
+
+    Assumes that criterion_values in each Option are already scaled appropriately
+    by get_option_data for direct use in weighted sum calculation.
+
+    Args:
+        decision: The ParsedDecision object containing options and criteria.
+
+    Returns:
+        The ParsedDecision object with options ranked by score.
+    """
+    for option in decision.options:
+        option.score = 0.0
+        if option.criterion_values:
+            for criterion in decision.criteria:
+                criterion_value = option.criterion_values.get(criterion.name)
+                if criterion_value is not None:
+                    # Directly use the criterion value (assumed to be scaled)
+                    # and multiply by the criterion weight.
+                    option.score += criterion.weight * criterion_value
+                # If criterion_value is None, it contributes 0 to the score for this criterion.
+
+    # Sort options by score descending
+    # Use a large negative number for None scores to place them at the end
+    decision.options.sort(
+        key=lambda option: option.score if option.score is not None else -float("inf"),
+        reverse=True,
+    )
+
+    # Set recommended option based on the top-ranked option
+    if decision.options and decision.options[0].score is not None:
+        decision.recommended_option = decision.options[0].name
+    else:
+        # Handle cases where no options could be scored or ranked
+        decision.recommended_option = None
+
+    return decision

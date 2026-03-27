@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from backend.decision import ParsedDecision, rank_options
@@ -6,6 +7,20 @@ from backend.services.criteria_data_service import get_option_data
 from backend.services.llm_service import parse_decision
 
 app = FastAPI()
+
+# Allow the Vite dev server (and localhost variants) to call the API during local development.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class AnalyzeRequest(BaseModel):

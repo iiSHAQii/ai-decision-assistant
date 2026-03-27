@@ -6,13 +6,13 @@ CITY_DATA = {
         "salary": 0.7,
         "raw_salary": 100000,
         "career_opportunities": 0.8,
-        "cost_of_living": 0.9,
+        "cost_of_living": 0.3,
     },
     "Berlin": {
         "salary": 0.55,
         "raw_salary": 100000,
         "career_opportunities": 0.7,
-        "cost_of_living": 6,
+        "cost_of_living": 0.3,
     },
     "Amsterdam": {
         "salary": 0.6,
@@ -23,7 +23,7 @@ CITY_DATA = {
     "New York": {
         "salary": 70000,
         "career_opportunities": 8.5,
-        "cost_of_living": 9.5,
+        "cost_of_living": 0.2,
     },
 }
 
@@ -38,6 +38,8 @@ def get_option_data(decision: ParsedDecision) -> ParsedDecision:
     range [0, 1]. For some criteria (e.g. ``salary``)
     we also return a corresponding ``raw_<name>`` value
     if it exists in ``CITY_DATA`` (e.g. ``raw_salary``).
+    The score is expected to be a utility score, e.g "cost of 0.1" 
+    indicates that a citiy is very expensive.
 
     This function mutates the given ParsedDecision in-place by
     enriching each Option with a ``criterion_values`` mapping:

@@ -29,6 +29,10 @@ Important rules:
     safety
     weather
 - The criteria list and the weight keys must match exactly.
+- Do NOT invent or add generic criteria (e.g. "other_factors", "misc", "other", "other_factor").
+  Only include criteria that are explicitly mentioned by the user, or clearly implied by the question.
+- The number of criteria can be 1 or more.
+  - If the question mentions only ONE criterion, return exactly ONE criterion and set its weight to 1.0.
 
 Decision question: "{question}"
 

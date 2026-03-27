@@ -4,25 +4,26 @@ from backend.decision import ParsedDecision
 CITY_DATA = {
     "London": {
         "salary": 0.7,
-        "raw_salary": 100000,
+        "raw_salary": "200000$ (annual)",
         "career_opportunities": 0.8,
         "cost_of_living": 0.3,
     },
     "Berlin": {
         "salary": 0.55,
-        "raw_salary": 100000,
+        "raw_salary": "70,000$ (annual)",
         "career_opportunities": 0.7,
         "cost_of_living": 0.3,
     },
     "Amsterdam": {
         "salary": 0.6,
-        "raw_salary": 100000,
+        "raw_salary": "100,000$ (annual)",
         "career_opportunities": 0.75,
         "cost_of_living": 0.8,
     },
     "New York": {
-        "salary": 70000,
-        "career_opportunities": 8.5,
+        "salary": 0.9,
+        "raw_salary": "250,000$ (annual)",
+        "career_opportunities": 0.85,
         "cost_of_living": 0.2,
     },
 }

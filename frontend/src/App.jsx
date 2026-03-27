@@ -240,7 +240,7 @@ function App() {
 
             <section className="section">
               <h2 className="section-label">Per-criterion values:</h2>
-              <p className="scale-info">All criterion values are scored on a scale of 0-10</p>
+              <p className="scale-info">All criterion values are scored on a scale of 0-10. Hover over values to see raw data.</p>
               <div className="card results-card">
                 <div className="table-wrap">
                   <table className="values-table">
@@ -256,11 +256,20 @@ function App() {
                       {options.map((o) => (
                         <tr key={o.name}>
                           <td className="option-col">{o.name}</td>
-                          {criteria.map((c) => (
-                            <td key={c.name}>
-                              {formatCriterionValue(o.criterion_values?.[c.name])}
-                            </td>
-                          ))}
+                          {criteria.map((c) => {
+                            const value = o.criterion_values?.[c.name]
+                            const rawKey = `raw_${c.name}`
+                            const rawValue = o.criterion_values?.[rawKey]
+                            const formattedValue = formatCriterionValue(value)
+                            const formattedRaw = typeof rawValue === 'string' ? rawValue : (typeof rawValue === 'number' ? formatNumber(rawValue, 2) : null)
+                            const title = rawValue != null ? formattedRaw : null
+                            
+                            return (
+                              <td key={c.name} className={rawValue != null ? 'criterion-with-raw' : ''} title={title}>
+                                {formattedValue}
+                              </td>
+                            )
+                          })}
                         </tr>
                       ))}
                     </tbody>

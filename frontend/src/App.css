@@ -340,6 +340,17 @@
   font-weight: 600;
 }
 
+.criterion-with-raw {
+  cursor: help;
+  border-bottom: 2px dotted #9ca3af;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.criterion-with-raw:hover {
+  background-color: #f3f4f6;
+  border-bottom-color: #2563eb;
+}
+
 .explanation-card {
   background-color: #ffffff;
 }

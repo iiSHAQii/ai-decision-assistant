@@ -11,6 +11,21 @@ load_dotenv(override=True)
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
+FALLBACK_EXPLANATION = (
+    "We could not generate a detailed explanation right now, but the ranked "
+    "decision results are available above."
+)
+
+
+def _strip_markdown_fences(text: str) -> str:
+    """Normalize model output by removing markdown code fences when present."""
+    normalized = (text or "").strip()
+    if normalized.startswith("```"):
+        normalized = normalized.split("```")[1]
+        if normalized.startswith("json"):
+            normalized = normalized[4:]
+    return normalized.strip()
+
 
 def _build_prompt(question: str) -> str:
     return f"""
@@ -54,13 +69,59 @@ def parse_decision_raw(question: str) -> dict:
     response = client.models.generate_content(
         model="models/gemini-2.5-flash", contents=prompt
     )
-    text = response.text.strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
+    text = _strip_markdown_fences(response.text or "")
+    return json.loads(text)
 
-    return json.loads(text.strip())
+
+def _build_explanation_prompt(decision: ParsedDecision) -> str:
+    """Build the prompt for explanation generation from enriched ParsedDecision data."""
+    payload = {
+        "question": decision.question,
+        "criteria": [
+            {
+                "name": c.name,
+                "weight": c.weight,
+                "total_score": c.total_score,
+            }
+            for c in decision.criteria
+        ],
+        "options": [
+            {
+                "name": o.name,
+                "score": o.score,
+                "criterion_values": o.criterion_values,
+            }
+            for o in decision.options
+        ],
+        "recommended_option": decision.recommended_option,
+    }
+
+    return f"""
+You are a decision analysis assistant.
+Using the decision payload below, generate a concise, human-readable explanation of the result.
+
+Rules:
+- Return plain text only (no markdown or bullet points).
+- Keep it concise: 2 to 3 sentences, maximum 70 words.
+- Mention only the most important criteria, key ranking driver, and one major trade-off.
+- Reference the recommended option if available.
+- If some values are missing, acknowledge uncertainty in one short clause.
+
+Decision payload:
+{json.dumps(payload, ensure_ascii=True)}
+"""
+
+
+def generate_explanation(decision: ParsedDecision) -> str:
+    """Generate explanation text from ParsedDecision data using the LLM."""
+    prompt = _build_explanation_prompt(decision)
+    response = client.models.generate_content(
+        model="models/gemini-2.5-flash", contents=prompt
+    )
+    explanation = _strip_markdown_fences(response.text or "")
+    if not explanation:
+        raise ValueError("LLM returned an empty explanation")
+    return explanation
 
 
 def decision_from_payload(payload: dict, question: str) -> ParsedDecision:

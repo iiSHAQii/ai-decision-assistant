@@ -1,10 +1,16 @@
+from contextlib import suppress
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from backend.decision import ParsedDecision, rank_options
 from backend.services.criteria_data_service import get_option_data
-from backend.services.llm_service import parse_decision
+from backend.services.llm_service import (
+    FALLBACK_EXPLANATION,
+    generate_explanation,
+    parse_decision,
+)
 
 app = FastAPI()
 
@@ -34,7 +40,11 @@ async def analyze_decision(request: AnalyzeRequest):
         result = get_option_data(result)
         # next step: score the options and enrich the result with the scores
         ranked_result = rank_options(result)
+        # Explanation generation is best-effort and should not fail the full request.
+        ranked_result.explanation = FALLBACK_EXPLANATION
+        with suppress(Exception):
+            ranked_result.explanation = generate_explanation(ranked_result)
         print(ranked_result)
         return ranked_result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

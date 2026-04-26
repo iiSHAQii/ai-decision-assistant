@@ -3,9 +3,9 @@ from unittest.mock import MagicMock
 
 import requests
 
+from backend.services.providers.geocoding import GEOCODING_URL
 from backend.services.providers.open_meteo import (
     FORECAST_URL,
-    GEOCODING_URL,
     IDEAL_TEMP_C,
     OpenMeteoWeatherProvider,
 )
@@ -29,13 +29,14 @@ def _session_returning(*responses):
     return session
 
 
+def _geocode_payload(lat: float, lon: float, cc: str = "GB") -> dict:
+    return {"results": [{"latitude": lat, "longitude": lon, "country_code": cc}]}
+
+
 class TestOpenMeteoWeatherProvider(unittest.TestCase):
     def test_returns_comfort_datapoint_on_happy_path(self):
-        # Geocoding returns coords for London; forecast returns 7 days of stable temps.
-        geocode_resp = _response(
-            {"results": [{"latitude": 51.5, "longitude": -0.1}]}
-        )
-        # Daily highs around 23, lows around 19 -> mean 21 -> comfort 100.
+        # Highs around 23, lows around 19 -> mean 21 -> comfort = 100.
+        geocode_resp = _response(_geocode_payload(51.5, -0.1))
         forecast_resp = _response(
             {
                 "daily": {
@@ -50,14 +51,12 @@ class TestOpenMeteoWeatherProvider(unittest.TestCase):
         result = provider.fetch("London")
 
         self.assertIsNotNone(result)
-        self.assertAlmostEqual(result.raw_value, 100.0)  # |21 - 21| = 0
+        self.assertAlmostEqual(result.raw_value, 100.0)
         self.assertIn("21.0°C", result.display_value)
         self.assertEqual(result.source, "open-meteo")
 
     def test_comfort_decreases_with_distance_from_ideal(self):
-        geocode_resp = _response(
-            {"results": [{"latitude": 0.0, "longitude": 0.0}]}
-        )
+        geocode_resp = _response(_geocode_payload(0.0, 0.0))
         # mean = 31°C -> comfort = 100 - |31 - 21| = 90
         forecast_resp = _response(
             {
@@ -74,18 +73,15 @@ class TestOpenMeteoWeatherProvider(unittest.TestCase):
         self.assertAlmostEqual(result.raw_value, 100.0 - abs(31.0 - IDEAL_TEMP_C))
 
     def test_returns_none_when_geocoding_finds_no_match(self):
-        # Empty results list = legitimate "city not found", not an error.
+        # Empty results = legitimate "city not found", not an error.
         session = _session_returning(_response({"results": []}))
         provider = OpenMeteoWeatherProvider(session=session)
 
-        result = provider.fetch("Atlantis")
-
-        self.assertIsNone(result)
+        self.assertIsNone(provider.fetch("Atlantis"))
         # Forecast should NOT have been called.
         self.assertEqual(session.get.call_count, 1)
 
     def test_geocoding_http_error_propagates(self):
-        # Per project policy: surface unexpected errors loudly, don't swallow.
         session = _session_returning(_response({}, status=500))
         provider = OpenMeteoWeatherProvider(session=session)
 
@@ -93,9 +89,7 @@ class TestOpenMeteoWeatherProvider(unittest.TestCase):
             provider.fetch("London")
 
     def test_forecast_http_error_propagates(self):
-        geocode_resp = _response(
-            {"results": [{"latitude": 51.5, "longitude": -0.1}]}
-        )
+        geocode_resp = _response(_geocode_payload(51.5, -0.1))
         session = _session_returning(geocode_resp, _response({}, status=503))
         provider = OpenMeteoWeatherProvider(session=session)
 
@@ -111,7 +105,6 @@ class TestOpenMeteoWeatherProvider(unittest.TestCase):
             provider.fetch("London")
 
     def test_malformed_geocode_response_raises(self):
-        # Missing required latitude/longitude fields.
         session = _session_returning(_response({"results": [{"name": "Nowhere"}]}))
         provider = OpenMeteoWeatherProvider(session=session)
 
@@ -119,11 +112,10 @@ class TestOpenMeteoWeatherProvider(unittest.TestCase):
             provider.fetch("Nowhere")
 
     def test_empty_forecast_arrays_raise_value_error(self):
-        # 200 OK but the daily temperature lists are missing/empty -> raise, don't pretend.
-        geocode_resp = _response(
-            {"results": [{"latitude": 0.0, "longitude": 0.0}]}
+        geocode_resp = _response(_geocode_payload(0.0, 0.0))
+        forecast_resp = _response(
+            {"daily": {"temperature_2m_max": [], "temperature_2m_min": []}}
         )
-        forecast_resp = _response({"daily": {"temperature_2m_max": [], "temperature_2m_min": []}})
         session = _session_returning(geocode_resp, forecast_resp)
         provider = OpenMeteoWeatherProvider(session=session)
 
@@ -131,9 +123,7 @@ class TestOpenMeteoWeatherProvider(unittest.TestCase):
             provider.fetch("Somewhere")
 
     def test_geocoding_called_with_expected_params(self):
-        geocode_resp = _response(
-            {"results": [{"latitude": 1.0, "longitude": 2.0}]}
-        )
+        geocode_resp = _response(_geocode_payload(1.0, 2.0))
         forecast_resp = _response(
             {
                 "daily": {

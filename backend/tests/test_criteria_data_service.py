@@ -2,7 +2,7 @@ import unittest
 
 from backend.decision import Criterion, Option, ParsedDecision
 from backend.services.criteria_data_service import get_option_data
-from backend.services.providers import ProviderRegistry
+from backend.services.providers import ProviderRegistry, StaticCityProvider
 from backend.services.providers.base import DataPoint, DataProvider, Direction
 
 
@@ -17,15 +17,28 @@ def _decision(option_names, criterion_names):
     )
 
 
+def _static_only_registry() -> ProviderRegistry:
+    """Registry with just the static city providers — no network."""
+    registry = ProviderRegistry()
+    registry.register(StaticCityProvider("salary", raw_key="raw_salary"))
+    registry.register(StaticCityProvider("career_opportunities"))
+    registry.register(StaticCityProvider("cost_of_living"))
+    return registry
+
+
 class TestStaticCityBehaviorPreservation(unittest.TestCase):
-    """Verifies the registry refactor preserves the prior 4-city flow."""
+    """Confirms StaticCityProvider data flows unchanged through get_option_data.
+
+    Uses an explicit static-only registry so these tests don't drift when the
+    default registry is reconfigured (e.g. swapping salary to a real source).
+    """
 
     def test_known_cities_pass_utility_values_through(self):
         decision = _decision(
             ["London", "Berlin"],
             ["salary", "career_opportunities", "cost_of_living"],
         )
-        result = get_option_data(decision)
+        result = get_option_data(decision, registry=_static_only_registry())
         london = next(o for o in result.options if o.name == "London")
         berlin = next(o for o in result.options if o.name == "Berlin")
         self.assertEqual(london.criterion_values["salary"], 0.7)
@@ -35,20 +48,18 @@ class TestStaticCityBehaviorPreservation(unittest.TestCase):
 
     def test_raw_companion_values_are_preserved(self):
         decision = _decision(["London"], ["salary"])
-        result = get_option_data(decision)
+        result = get_option_data(decision, registry=_static_only_registry())
         london = result.options[0]
         self.assertEqual(london.criterion_values["raw_salary"], "200000$ (annual)")
 
     def test_unknown_city_yields_none_values(self):
         decision = _decision(["Atlantis"], ["salary", "career_opportunities"])
-        result = get_option_data(decision)
+        result = get_option_data(decision, registry=_static_only_registry())
         atlantis = result.options[0]
         self.assertIsNone(atlantis.criterion_values["salary"])
         self.assertIsNone(atlantis.criterion_values["career_opportunities"])
 
     def test_unknown_criterion_yields_none(self):
-        # Pass an explicit empty registry so this test doesn't depend on what
-        # the default registry happens to contain.
         decision = _decision(["London"], ["happiness"])
         result = get_option_data(decision, registry=ProviderRegistry())
         london = result.options[0]

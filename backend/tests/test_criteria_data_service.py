@@ -65,6 +65,37 @@ class TestStaticCityBehaviorPreservation(unittest.TestCase):
         london = result.options[0]
         self.assertIsNone(london.criterion_values["happiness"])
 
+    def test_lookup_is_case_insensitive(self):
+        # The LLM may emit lowercase city names ("london") even when the
+        # dataset uses Title Case. Lookup must still find the city.
+        decision = _decision(["london", "BERLIN"], ["salary"])
+        result = get_option_data(decision, registry=_static_only_registry())
+        self.assertEqual(result.options[0].criterion_values["salary"], 0.7)
+        self.assertEqual(result.options[1].criterion_values["salary"], 0.55)
+
+
+class TestDefaultRegistryAliases(unittest.TestCase):
+    """Common LLM variants for criterion names should route via aliases."""
+
+    def test_career_options_alias_routes_to_career_opportunities(self):
+        from backend.services.providers import build_default_registry
+
+        registry = build_default_registry(cache_dir=None)
+        decision = _decision(["London"], ["career_options"])
+        result = get_option_data(decision, registry=registry)
+        # Routed through alias -> StaticCityProvider("career_opportunities") -> 0.8 for London.
+        self.assertEqual(
+            result.options[0].criterion_values["career_options"], 0.8
+        )
+
+    def test_expenses_alias_routes_to_cost_of_living(self):
+        from backend.services.providers import build_default_registry
+
+        registry = build_default_registry(cache_dir=None)
+        decision = _decision(["London"], ["expenses"])
+        result = get_option_data(decision, registry=registry)
+        self.assertEqual(result.options[0].criterion_values["expenses"], 0.3)
+
 
 class _FakeRawProvider(DataProvider):
     """Provider that returns raw values requiring normalization."""

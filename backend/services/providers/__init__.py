@@ -42,8 +42,22 @@ def build_default_registry(cache_dir: Path | None = DEFAULT_CACHE_DIR) -> Provid
 
     # Career opportunities and cost-of-living remain static utility scores
     # for now — see #16 follow-ups for replacing these with real data sources.
-    registry.register(StaticCityProvider("career_opportunities"))
-    registry.register(StaticCityProvider("cost_of_living"))
+    # Aliases catch common LLM variants so a near-miss criterion name still routes.
+    registry.register(
+        StaticCityProvider("career_opportunities"),
+        aliases=(
+            "career_options",
+            "career_growth",
+            "careers",
+            "job_opportunities",
+            "job_market",
+            "professional_opportunities",
+        ),
+    )
+    registry.register(
+        StaticCityProvider("cost_of_living"),
+        aliases=("expenses", "living_cost", "living_costs", "cost"),
+    )
 
     weather = _wrap_with_cache(
         OpenMeteoWeatherProvider(), cache_dir, "open_meteo.json"

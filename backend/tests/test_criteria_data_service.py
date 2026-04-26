@@ -47,10 +47,12 @@ class TestStaticCityBehaviorPreservation(unittest.TestCase):
         self.assertIsNone(atlantis.criterion_values["career_opportunities"])
 
     def test_unknown_criterion_yields_none(self):
-        decision = _decision(["London"], ["weather"])
-        result = get_option_data(decision)
+        # Pass an explicit empty registry so this test doesn't depend on what
+        # the default registry happens to contain.
+        decision = _decision(["London"], ["happiness"])
+        result = get_option_data(decision, registry=ProviderRegistry())
         london = result.options[0]
-        self.assertIsNone(london.criterion_values["weather"])
+        self.assertIsNone(london.criterion_values["happiness"])
 
 
 class _FakeRawProvider(DataProvider):

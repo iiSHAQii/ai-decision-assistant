@@ -1,4 +1,6 @@
 from backend.services.providers.base import DataPoint, DataProvider, Direction
+from backend.services.providers.cache import JsonDiskCache
+from backend.services.providers.cached import CachedProvider
 from backend.services.providers.registry import ProviderRegistry
 from backend.services.providers.static_city import StaticCityProvider
 
@@ -13,9 +15,11 @@ def build_default_registry() -> ProviderRegistry:
 
 
 __all__ = [
+    "CachedProvider",
     "DataPoint",
     "DataProvider",
     "Direction",
+    "JsonDiskCache",
     "ProviderRegistry",
     "StaticCityProvider",
     "build_default_registry",

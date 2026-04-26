@@ -1,86 +1,56 @@
 from backend.decision import ParsedDecision
+from backend.services.normalization import min_max_normalize
+from backend.services.providers import ProviderRegistry, build_default_registry
+
+_default_registry: ProviderRegistry | None = None
 
 
-CITY_DATA = {
-    "London": {
-        "salary": 0.7,
-        "raw_salary": "200000$ (annual)",
-        "career_opportunities": 0.8,
-        "cost_of_living": 0.3,
-    },
-    "Berlin": {
-        "salary": 0.55,
-        "raw_salary": "70,000$ (annual)",
-        "career_opportunities": 0.7,
-        "cost_of_living": 0.3,
-    },
-    "Amsterdam": {
-        "salary": 0.6,
-        "raw_salary": "100,000$ (annual)",
-        "career_opportunities": 0.75,
-        "cost_of_living": 0.8,
-    },
-    "New York": {
-        "salary": 0.9,
-        "raw_salary": "250,000$ (annual)",
-        "career_opportunities": 0.85,
-        "cost_of_living": 0.2,
-    },
-}
+def _get_default_registry() -> ProviderRegistry:
+    global _default_registry
+    if _default_registry is None:
+        _default_registry = build_default_registry()
+    return _default_registry
 
 
-def get_option_data(decision: ParsedDecision) -> ParsedDecision:
+def get_option_data(
+    decision: ParsedDecision,
+    registry: ProviderRegistry | None = None,
+) -> ParsedDecision:
+    """Enrich each option with per-criterion values from the registry.
+
+    For each criterion in `decision.criteria`:
+      - Look up a provider via the registry.
+      - If absent, set the criterion value to None for every option.
+      - Otherwise fetch a DataPoint per option, normalize raw values across
+        the option set per the provider's direction, and write the normalized
+        value into option.criterion_values[criterion]. If the provider returns
+        a display_value, also store it under "raw_<criterion>".
+
+    Returns the same decision (mutated in-place).
     """
-    Retrieve option data for the given decision.
-    Does not assign or use weights; it simply returns
-    the underlying criterion values for each option.
+    registry = registry or _get_default_registry()
 
-    All *normalized* values are expected to be in the
-    range [0, 1]. For some criteria (e.g. ``salary``)
-    we also return a corresponding ``raw_<name>`` value
-    if it exists in ``CITY_DATA`` (e.g. ``raw_salary``).
-    The score is expected to be a utility score, e.g "cost of 0.1" 
-    indicates that a citiy is very expensive.
+    for option in decision.options:
+        if option.criterion_values is None:
+            option.criterion_values = {}
 
-    This function mutates the given ParsedDecision in-place by
-    enriching each Option with a ``criterion_values`` mapping:
-
-        option.criterion_values = {
-            "salary": 0.7,
-            "raw_salary": 100000,
-            "cost_of_living": 0.9,
-            ...
-        }
-
-    and then returns the same ParsedDecision instance.
-    """
-    option_names = [o.name for o in decision.options]
-    criterion_names = [c.name for c in decision.criteria]
-
-    # Enrich each Option in the decision with its per-criterion values
-    name_to_option = {o.name: o for o in decision.options}
-
-    for option_name in option_names:
-        option = name_to_option.get(option_name)
-        if option is None:
+    for criterion in decision.criteria:
+        provider = registry.get(criterion.name)
+        if provider is None:
+            for option in decision.options:
+                option.criterion_values[criterion.name] = None
             continue
 
-        option_data = CITY_DATA.get(option_name, {})
-        criterion_values: dict[str, float | None] = {}
+        points = [provider.fetch(o.name) for o in decision.options]
+        normalized = min_max_normalize(
+            [p.raw_value if p else None for p in points],
+            provider.direction,
+        )
 
-        if option_data:
-            for criterion in criterion_names:
-                # Normalized value (if present)
-                criterion_values[criterion] = option_data.get(criterion)
-
-                # Raw companion value, e.g. "raw_salary"
-                raw_key = f"raw_{criterion}"
-                if raw_key in option_data:
-                    criterion_values[raw_key] = option_data[raw_key]
-        else:
-            criterion_values = {criterion: None for criterion in criterion_names}
-
-        option.criterion_values = criterion_values
+        for option, point, norm in zip(decision.options, points, normalized):
+            option.criterion_values[criterion.name] = norm
+            if point and point.display_value is not None:
+                option.criterion_values[f"raw_{criterion.name}"] = point.display_value
 
     return decision
 
@@ -95,12 +65,6 @@ if __name__ == "__main__":
             Criterion(name="career_opportunities", weight=0.4),
             Criterion(name="cost_of_living", weight=0.2),
         ],
-        options=[
-            Option(name="London"),
-            Option(name="Berlin"),
-            Option(name="Amsterdam"),
-        ],
+        options=[Option(name="London"), Option(name="Berlin"), Option(name="Amsterdam")],
     )
-
-    enriched = get_option_data(decision)
-    print("enriched decision:", enriched)
+    print("enriched decision:", get_option_data(decision))

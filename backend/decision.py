@@ -26,6 +26,10 @@ class ParsedDecision(BaseModel):
     explanation: str | None = None
     recommended_option: str | None = None
 
+    # Criteria that had no data for any option — dropped from scoring and
+    # surfaced to the user so they can interpret the result honestly.
+    skipped_criteria: list[str] | None = None
+
 
 if __name__ == "__main__":
     json_str = """
@@ -36,7 +40,6 @@ if __name__ == "__main__":
             {"name": "Career Opportunities", "weight": 0.4},
             {"name": "Cost of Living", "weight": 0.2}
         ],
-        # options and option scores are not required
         "options": [{"name": "London", "score": 7.5}, {"name": "Berlin", "score": 6.2}]
     }
     """
@@ -45,41 +48,66 @@ if __name__ == "__main__":
 
 
 def rank_options(decision: ParsedDecision) -> ParsedDecision:
+    """Compute weighted-average scores per option, drop fully-missing criteria,
+    and pick a recommendation only when the top option strictly beats the rest.
+
+    For each option, score = sum(weight * value) / sum(weight) over criteria
+    where the option has a non-None value — a true weighted average in [0, 1].
+    Missing values do not contribute to either numerator or denominator, so an
+    option isn't penalized for our data gaps.
+
+    Criteria with no data for ANY option are dropped entirely and recorded in
+    `decision.skipped_criteria` so the UI can disclose the gap to the user.
+
+    `recommended_option` is set to the top-ranked option only when it has a
+    real score AND that score strictly exceeds the runner-up's. Otherwise None
+    — to avoid implying confidence we don't have.
     """
-    Computes weighted scores for options and ranks them.
+    # Identify criteria with at least one non-None value across all options.
+    skipped: list[str] = []
+    active_criteria: list[Criterion] = []
+    for criterion in decision.criteria:
+        has_any_data = any(
+            opt.criterion_values is not None
+            and opt.criterion_values.get(criterion.name) is not None
+            for opt in decision.options
+        )
+        if has_any_data:
+            active_criteria.append(criterion)
+        else:
+            skipped.append(criterion.name)
+    decision.skipped_criteria = skipped
 
-    Assumes that criterion_values in each Option are already scaled appropriately
-    by get_option_data for direct use in weighted sum calculation.
-
-    Args:
-        decision: The ParsedDecision object containing options and criteria.
-
-    Returns:
-        The ParsedDecision object with options ranked by score.
-    """
+    # Compute each option's weighted average over active criteria with data.
     for option in decision.options:
-        option.score = 0.0
-        if option.criterion_values:
-            for criterion in decision.criteria:
-                criterion_value = option.criterion_values.get(criterion.name)
-                if criterion_value is not None:
-                    # Directly use the criterion value (assumed to be scaled)
-                    # and multiply by the criterion weight.
-                    option.score += criterion.weight * criterion_value
-                # If criterion_value is None, it contributes 0 to the score for this criterion.
+        if not option.criterion_values:
+            option.score = None
+            continue
+        weighted_sum = 0.0
+        weight_sum = 0.0
+        for criterion in active_criteria:
+            value = option.criterion_values.get(criterion.name)
+            if value is None:
+                continue
+            weighted_sum += criterion.weight * value
+            weight_sum += criterion.weight
+        option.score = (weighted_sum / weight_sum) if weight_sum > 0 else None
 
-    # Sort options by score descending
-    # Use a large negative number for None scores to place them at the end
-    decision.options.sort(
-        key=lambda option: option.score if option.score is not None else -float("inf"),
-        reverse=True,
-    )
+    # Sort: real scores first (descending), None scores last.
+    decision.options.sort(key=lambda o: (o.score is None, -(o.score or 0.0)))
 
-    # Set recommended option based on the top-ranked option
-    if decision.options and decision.options[0].score is not None:
-        decision.recommended_option = decision.options[0].name
-    else:
-        # Handle cases where no options could be scored or ranked
-        decision.recommended_option = None
+    # Recommendation: only when top option strictly beats #2 (or stands alone).
+    decision.recommended_option = _pick_recommendation(decision.options)
 
     return decision
+
+
+def _pick_recommendation(options: list[Option]) -> str | None:
+    if not options or options[0].score is None:
+        return None
+    if len(options) == 1:
+        return options[0].name
+    runner_up = options[1].score
+    if runner_up is None or options[0].score > runner_up:
+        return options[0].name
+    return None  # tied at the top — no honest single recommendation

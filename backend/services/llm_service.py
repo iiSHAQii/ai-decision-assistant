@@ -94,6 +94,7 @@ def _build_explanation_prompt(decision: ParsedDecision) -> str:
             for o in decision.options
         ],
         "recommended_option": decision.recommended_option,
+        "skipped_criteria": decision.skipped_criteria or [],
     }
 
     return f"""
@@ -104,8 +105,9 @@ Rules:
 - Return plain text only (no markdown or bullet points).
 - Keep it concise: 2 to 3 sentences, maximum 70 words.
 - Mention only the most important criteria, key ranking driver, and one major trade-off.
-- Reference the recommended option if available.
-- If some values are missing, acknowledge uncertainty in one short clause.
+- If recommended_option is null, do NOT invent a winner. Explain plainly that no clear recommendation can be made — typically because scores tied or no data was available — and tell the user what would help (more options, fewer criteria, or different criteria).
+- If skipped_criteria is non-empty, mention briefly that data was unavailable for those criteria so the user knows the ranking ignored them.
+- If some option values are missing for active criteria, acknowledge that uncertainty in one short clause.
 
 Decision payload:
 {json.dumps(payload, ensure_ascii=True)}

@@ -33,3 +33,6 @@ secrets.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Provider cache (filled at runtime)
+.cache/
